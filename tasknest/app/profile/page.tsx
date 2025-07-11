@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, ChangeEvent } from "react";
+import React, { useState, ChangeEvent, KeyboardEvent, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -18,6 +18,8 @@ import {
 import { useRouter } from "next/navigation";
 import EditIcon from "@mui/icons-material/Edit";
 import SaveIcon from "@mui/icons-material/Save";
+import MuiAlert from "@mui/material/Alert";
+import Snackbar from "@mui/material/Snackbar";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -44,6 +46,35 @@ export default function ProfilePage() {
   const [openChangePasswordDialog, setOpenChangePasswordDialog] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" as "success" | "error" });
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setSnackbar({ open: true, message: "Not authenticated", severity: "error" });
+      return;
+    }
+    fetch("/api/user/profile", {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const data = await res.json();
+          setSnackbar({ open: true, message: data.error || "Failed to fetch profile", severity: "error" });
+          return;
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (data) {
+          setUser((prev) => ({ ...prev, name: data.name, email: data.email }));
+          setTempData((prev) => ({ ...prev, name: data.name, email: data.email }));
+        }
+      })
+      .catch(() => {
+        setSnackbar({ open: true, message: "Network error", severity: "error" });
+      });
+  }, []);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -83,11 +114,76 @@ export default function ProfilePage() {
     setCurrentPassword("");
     setNewPassword("");
   };
-  const handleSaveChangePassword = () => {
-    // TODO: Implement password change logic (API call, validation, etc.)
-    setOpenChangePasswordDialog(false);
-    setCurrentPassword("");
-    setNewPassword("");
+  // Save name to backend
+  const handleSaveName = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setSnackbar({ open: true, message: "Not authenticated", severity: "error" });
+      return;
+    }
+    try {
+      const res = await fetch("/api/user/update-profile", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: tempData.name }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUser((prev) => ({ ...prev, name: tempData.name }));
+        setIsEditing((prev) => ({ ...prev, name: false }));
+        setSnackbar({ open: true, message: "Name updated successfully!", severity: "success" });
+      } else {
+        setSnackbar({ open: true, message: data.error || "Failed to update name", severity: "error" });
+      }
+    } catch (err) {
+      setSnackbar({ open: true, message: "Network error", severity: "error" });
+    }
+  };
+
+  // Save password to backend
+  const handleSaveChangePassword = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setSnackbar({ open: true, message: "Not authenticated", severity: "error" });
+      return;
+    }
+    try {
+      const res = await fetch("/api/user/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setOpenChangePasswordDialog(false);
+        setCurrentPassword("");
+        setNewPassword("");
+        setSnackbar({ open: true, message: "Password changed successfully!", severity: "success" });
+      } else {
+        setSnackbar({ open: true, message: data.error || "Failed to change password", severity: "error" });
+      }
+    } catch (err) {
+      setSnackbar({ open: true, message: "Network error", severity: "error" });
+    }
+  };
+
+  // Handle Enter key for name field
+  const handleNameKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSaveName();
+    }
+  };
+
+  // Snackbar close handler
+  const handleSnackbarClose = (_event?: React.SyntheticEvent | Event, reason?: string) => {
+    if (reason === "clickaway") return;
+    setSnackbar((prev) => ({ ...prev, open: false }));
   };
 
   return (
@@ -176,6 +272,7 @@ export default function ProfilePage() {
                 name="name"
                 value={tempData.name}
                 onChange={handleChange}
+                onKeyDown={handleNameKeyDown}
                 fullWidth
                 size="small"
                 autoFocus
@@ -190,7 +287,7 @@ export default function ProfilePage() {
               </Typography>
             )}
             <IconButton
-              onClick={() => toggleEdit("name")}
+              onClick={isEditing.name ? handleSaveName : () => toggleEdit("name")}
               sx={{
                 position: "absolute",
                 right: 0,
@@ -291,6 +388,24 @@ export default function ProfilePage() {
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* Snackbar for feedback */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={3000}
+          onClose={handleSnackbarClose}
+          anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        >
+          <MuiAlert
+            onClose={handleSnackbarClose}
+            severity={snackbar.severity}
+            sx={{ width: "100%" }}
+            elevation={6}
+            variant="filled"
+          >
+            {snackbar.message}
+          </MuiAlert>
+        </Snackbar>
       </Paper>
     </Box>
   );
