@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import clientPromise from "@/server/mongodb";
-import { getUserIdFromRequest } from "@/server/jwt";
+import clientPromise from "../../../server/mongodb";
+import { getUserIdFromRequest } from "../../../server/jwt";
 import { ObjectId } from "mongodb";
 
 export async function PUT(request: Request, context: { params: { id: string } }) {
