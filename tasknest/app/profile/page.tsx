@@ -10,6 +10,10 @@ import {
   TextField,
   Stack,
   IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import { useRouter } from "next/navigation";
 import EditIcon from "@mui/icons-material/Edit";
@@ -37,6 +41,10 @@ export default function ProfilePage() {
     password: "",
   });
 
+  const [openChangePasswordDialog, setOpenChangePasswordDialog] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setTempData((prev) => ({ ...prev, [name]: value }));
@@ -63,6 +71,23 @@ export default function ProfilePage() {
       const url = URL.createObjectURL(file);
       setUser((prev) => ({ ...prev, avatarUrl: url }));
     }
+  };
+
+  const handleOpenChangePassword = () => {
+    setOpenChangePasswordDialog(true);
+    setCurrentPassword("");
+    setNewPassword("");
+  };
+  const handleCloseChangePassword = () => {
+    setOpenChangePasswordDialog(false);
+    setCurrentPassword("");
+    setNewPassword("");
+  };
+  const handleSaveChangePassword = () => {
+    // TODO: Implement password change logic (API call, validation, etc.)
+    setOpenChangePasswordDialog(false);
+    setCurrentPassword("");
+    setNewPassword("");
   };
 
   return (
@@ -179,8 +204,8 @@ export default function ProfilePage() {
             </IconButton>
           </Box>
 
-          {/* Email */}
-          <Box sx={{ position: "relative" }}>
+          {/* Email (plain text, no edit icon) */}
+          <Box>
             <Typography
               variant="subtitle2"
               color="#800020"
@@ -189,96 +214,83 @@ export default function ProfilePage() {
             >
               Email
             </Typography>
-            {isEditing.email ? (
-              <TextField
-                name="email"
-                type="email"
-                value={tempData.email}
-                onChange={handleChange}
-                fullWidth
-                size="small"
-                autoFocus
-              />
-            ) : (
-              <Typography variant="body1" color="#4a4a4a" sx={{ lineHeight: 1.5 }}>
-                {user.email}
-              </Typography>
-            )}
-            <IconButton
-              onClick={() => toggleEdit("email")}
-              sx={{
-                position: "absolute",
-                right: 0,
-                top: isEditing.email ? 8 : "50%",
-                transform: isEditing.email ? "none" : "translateY(-50%)",
-                color: "#b22222",
-              }}
-              aria-label={isEditing.email ? "Save Email" : "Edit Email"}
-            >
-              {isEditing.email ? <SaveIcon /> : <EditIcon />}
-            </IconButton>
-          </Box>
-
-          {/* Password */}
-          <Box sx={{ position: "relative" }}>
-            <Typography
-              variant="subtitle2"
-              color="#800020"
-              fontWeight="700"
-              mb={1}
-            >
-              Password
+            <Typography variant="body1" color="#4a4a4a" sx={{ lineHeight: 1.5 }}>
+              {user.email}
             </Typography>
-            {isEditing.password ? (
-              <TextField
-                name="password"
-                type="password"
-                value={tempData.password}
-                onChange={handleChange}
-                fullWidth
-                size="small"
-                autoFocus
-                helperText="Leave blank to keep current password"
-              />
-            ) : (
-              <Typography
-                variant="body1"
-                color="#4a4a4a"
-                sx={{ fontStyle: "italic", lineHeight: 1.5 }}
-              >
-                ******** (hidden)
-              </Typography>
-            )}
-            <IconButton
-              onClick={() => toggleEdit("password")}
-              sx={{
-                position: "absolute",
-                right: 0,
-                top: isEditing.password ? 8 : "50%",
-                transform: isEditing.password ? "none" : "translateY(-50%)",
-                color: "#b22222",
-              }}
-              aria-label={isEditing.password ? "Save Password" : "Edit Password"}
-            >
-              {isEditing.password ? <SaveIcon /> : <EditIcon />}
-            </IconButton>
           </Box>
         </Stack>
 
-        <Button
-          variant="contained"
-          sx={{
-            mt: 6,
-            backgroundColor: "#800020",
-            color: "#fff",
-            fontWeight: 600,
-            "&:hover": { backgroundColor: "#4b0013" },
-            textTransform: "none",
-          }}
-          onClick={() => router.push("/dashboard")}
-        >
-          Back to Dashboard
-        </Button>
+        {/* Buttons: Change Password and Back to Dashboard */}
+        <Stack direction="row" spacing={2} justifyContent="center" mt={6}>
+          <Button
+            variant="contained"
+            sx={{
+              backgroundColor: "#800020",
+              color: "#fff",
+              fontWeight: 600,
+              "&:hover": { backgroundColor: "#4b0013" },
+              textTransform: "none",
+            }}
+            onClick={handleOpenChangePassword}
+          >
+            Change Password
+          </Button>
+          <Button
+            variant="contained"
+            sx={{
+              backgroundColor: "#800020",
+              color: "#fff",
+              fontWeight: 600,
+              "&:hover": { backgroundColor: "#4b0013" },
+              textTransform: "none",
+            }}
+            onClick={() => router.push("/dashboard")}
+          >
+            Back to Dashboard
+          </Button>
+        </Stack>
+
+        {/* Change Password Dialog */}
+        <Dialog open={openChangePasswordDialog} onClose={handleCloseChangePassword}>
+          <DialogTitle>Change Password</DialogTitle>
+          <DialogContent sx={{ minWidth: 350 }}>
+            <Stack spacing={3} mt={1}>
+              <TextField
+                label="Current Password"
+                type="password"
+                value={currentPassword}
+                onChange={e => setCurrentPassword(e.target.value)}
+                fullWidth
+                autoFocus
+              />
+              <TextField
+                label="New Password"
+                type="password"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                fullWidth
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseChangePassword} color="primary">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveChangePassword}
+              variant="contained"
+              sx={{
+                backgroundColor: "#800020",
+                color: "#fff",
+                fontWeight: 600,
+                "&:hover": { backgroundColor: "#4b0013" },
+                textTransform: "none",
+              }}
+            >
+              Save
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Paper>
     </Box>
   );
