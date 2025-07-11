@@ -1,4 +1,4 @@
-# ✅ TaskNest — A Modern Todo App (Frontend)
+# ✅ TaskNest — A Modern Todo App 
 
 TaskNest is a beautifully designed, responsive Todo app built with **Next.js**, **TypeScript**, and **Material UI**. It provides a user-friendly interface to manage your daily tasks, with clean design and elegant interaction — fully focused on the **frontend**.
 
@@ -52,6 +52,8 @@ tasknest/
 ├── postcss.config.js
 ├── next.config.js
 └── tailwind.config.ts   
+
+---
 
 🛠️ Getting Started
 
