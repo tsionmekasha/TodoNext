@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     const db = client.db();
     const now = new Date();
     const todo = {
-      userId: new ObjectId(userId),
+      userId, // store as string
       title: title.trim(),
       createdAt: now,
       updatedAt: now,
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
     const db = client.db();
     const todos = await db
       .collection("todos")
-      .find({ userId: new ObjectId(userId) })
+      .find({ userId }) // query as string
       .sort({ createdAt: -1 })
       .toArray();
     return NextResponse.json(todos, { status: 200 });
