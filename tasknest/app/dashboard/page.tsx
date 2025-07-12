@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Box,
   Container,
@@ -10,47 +11,146 @@ import {
   Stack,
   Snackbar,
   Alert,
+  CircularProgress,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material";
 import Navbar from "@/components/Navbar";
 import TodoForm from "@/components/TodoForm";
 import TodoItem from "@/components/TodoItem";
 
 interface Todo {
-  id: number;
-  task: string;
-  completed: boolean;
+  _id: string;
+  title: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [todos, setTodos] = useState<Todo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [editToastOpen, setEditToastOpen] = useState(false);
+  const [addLoading, setAddLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(""); // id of todo being edited
+  const [deleteLoading, setDeleteLoading] = useState(""); // id of todo being deleted
+  const [todoToDelete, setTodoToDelete] = useState<string | null>(null);
 
-  const addTodo = (task: string) => {
-    const newTodo: Todo = {
-      id: Date.now(),
-      task,
-      completed: false,
-    };
-    setTodos([newTodo, ...todos]);
+  // Auth check and fetch todos
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+    fetchTodos(token);
+    // eslint-disable-next-line
+  }, []);
+
+  const fetchTodos = async (token: string) => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/todos", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        if (res.status === 401) router.push("/login");
+        else setError("Failed to fetch todos");
+        setTodos([]);
+        return;
+      }
+      const data = await res.json();
+      setTodos(data);
+    } catch (err) {
+      setError("Network error");
+      setTodos([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const toggleTodo = (id: number) => {
-    setTodos((prev) =>
-      prev.map((todo) =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo
-      )
-    );
+  const addTodo = async (title: string) => {
+    const token = localStorage.getItem("token");
+    if (!token) return router.push("/login");
+    setAddLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/todos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ title }),
+      });
+      const data = await res.json();
+      if (res.status === 201) {
+        setTodos((prev) => [data, ...prev]);
+      } else {
+        setError(data.error || "Failed to add todo");
+      }
+    } catch (err) {
+      setError("Network error");
+    } finally {
+      setAddLoading(false);
+    }
   };
 
-  const deleteTodo = (id: number) => {
-    setTodos((prev) => prev.filter((todo) => todo.id !== id));
+  const editTodo = async (id: string, newTitle: string) => {
+    const token = localStorage.getItem("token");
+    if (!token) return router.push("/login");
+    setEditLoading(id);
+    setError("");
+    try {
+      const res = await fetch(`/api/todos/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ title: newTitle }),
+      });
+      const data = await res.json();
+      if (res.status === 200) {
+        setTodos((prev) => prev.map((todo) => (todo._id === id ? data : todo)));
+        setEditToastOpen(true);
+      } else {
+        setError(data.error || "Failed to update todo");
+      }
+    } catch (err) {
+      setError("Network error");
+    } finally {
+      setEditLoading("");
+    }
   };
 
-  const handleEdit = (id: number, newTask: string) => {
-    setTodos((prev) =>
-      prev.map((todo) => (todo.id === id ? { ...todo, task: newTask } : todo))
-    );
-    setEditToastOpen(true);
+  const deleteTodo = async (id: string) => {
+    const token = localStorage.getItem("token");
+    if (!token) return router.push("/login");
+    setDeleteLoading(id);
+    setError("");
+    try {
+      const res = await fetch(`/api/todos/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.status === 204) {
+        setTodos((prev) => prev.filter((todo) => todo._id !== id));
+      } else {
+        const data = await res.json();
+        setError(data.error || "Failed to delete todo");
+      }
+    } catch (err) {
+      setError("Network error");
+    } finally {
+      setDeleteLoading("");
+    }
   };
 
   const handleEditToastClose = (
@@ -59,6 +159,21 @@ export default function DashboardPage() {
   ) => {
     if (reason === "clickaway") return;
     setEditToastOpen(false);
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setTodoToDelete(id);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (todoToDelete) {
+      await deleteTodo(todoToDelete);
+      setTodoToDelete(null);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setTodoToDelete(null);
   };
 
   return (
@@ -89,7 +204,13 @@ export default function DashboardPage() {
 
             <Divider sx={{ my: 4 }} />
 
-            {todos.length === 0 ? (
+            {loading ? (
+              <Box display="flex" justifyContent="center" alignItems="center" minHeight={100}>
+                <CircularProgress />
+              </Box>
+            ) : error ? (
+              <Alert severity="error">{error}</Alert>
+            ) : todos.length === 0 ? (
               <Typography
                 variant="body1"
                 align="center"
@@ -102,12 +223,12 @@ export default function DashboardPage() {
               <Stack spacing={2}>
                 {todos.map((todo) => (
                   <TodoItem
-                    key={todo.id}
-                    task={todo.task}
-                    completed={todo.completed}
-                    onToggle={() => toggleTodo(todo.id)}
-                    onDelete={() => deleteTodo(todo.id)}
-                    onEdit={(newTask) => handleEdit(todo.id, newTask)}
+                    key={todo._id}
+                    task={todo.title}
+                    completed={false}
+                    onToggle={() => {}}
+                    onDelete={() => handleDeleteClick(todo._id)}
+                    onEdit={(newTask) => editTodo(todo._id, newTask)}
                   />
                 ))}
               </Stack>
@@ -131,6 +252,28 @@ export default function DashboardPage() {
           Task updated successfully!
         </Alert>
       </Snackbar>
+
+      {/* Confirmation Dialog for Deletion */}
+      <Dialog
+        open={!!todoToDelete}
+        onClose={handleCancelDelete}
+        aria-labelledby="confirm-delete-title"
+      >
+        <DialogTitle id="confirm-delete-title">Confirm Delete</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete this todo? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelDelete} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmDelete} color="error" variant="contained" autoFocus>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

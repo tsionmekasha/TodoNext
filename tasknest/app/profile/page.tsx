@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, ChangeEvent } from "react";
+import React, { useState, ChangeEvent, KeyboardEvent, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -10,10 +10,16 @@ import {
   TextField,
   Stack,
   IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import { useRouter } from "next/navigation";
 import EditIcon from "@mui/icons-material/Edit";
 import SaveIcon from "@mui/icons-material/Save";
+import MuiAlert from "@mui/material/Alert";
+import Snackbar from "@mui/material/Snackbar";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -36,6 +42,39 @@ export default function ProfilePage() {
     email: user.email,
     password: "",
   });
+
+  const [openChangePasswordDialog, setOpenChangePasswordDialog] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" as "success" | "error" });
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setSnackbar({ open: true, message: "Not authenticated", severity: "error" });
+      return;
+    }
+    fetch("/api/user/profile", {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const data = await res.json();
+          setSnackbar({ open: true, message: data.error || "Failed to fetch profile", severity: "error" });
+          return;
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (data) {
+          setUser((prev) => ({ ...prev, name: data.name, email: data.email }));
+          setTempData((prev) => ({ ...prev, name: data.name, email: data.email }));
+        }
+      })
+      .catch(() => {
+        setSnackbar({ open: true, message: "Network error", severity: "error" });
+      });
+  }, []);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -63,6 +102,88 @@ export default function ProfilePage() {
       const url = URL.createObjectURL(file);
       setUser((prev) => ({ ...prev, avatarUrl: url }));
     }
+  };
+
+  const handleOpenChangePassword = () => {
+    setOpenChangePasswordDialog(true);
+    setCurrentPassword("");
+    setNewPassword("");
+  };
+  const handleCloseChangePassword = () => {
+    setOpenChangePasswordDialog(false);
+    setCurrentPassword("");
+    setNewPassword("");
+  };
+  // Save name to backend
+  const handleSaveName = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setSnackbar({ open: true, message: "Not authenticated", severity: "error" });
+      return;
+    }
+    try {
+      const res = await fetch("/api/user/update-profile", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: tempData.name }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUser((prev) => ({ ...prev, name: tempData.name }));
+        setIsEditing((prev) => ({ ...prev, name: false }));
+        setSnackbar({ open: true, message: "Name updated successfully!", severity: "success" });
+      } else {
+        setSnackbar({ open: true, message: data.error || "Failed to update name", severity: "error" });
+      }
+    } catch (err) {
+      setSnackbar({ open: true, message: "Network error", severity: "error" });
+    }
+  };
+
+  // Save password to backend
+  const handleSaveChangePassword = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setSnackbar({ open: true, message: "Not authenticated", severity: "error" });
+      return;
+    }
+    try {
+      const res = await fetch("/api/user/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setOpenChangePasswordDialog(false);
+        setCurrentPassword("");
+        setNewPassword("");
+        setSnackbar({ open: true, message: "Password changed successfully!", severity: "success" });
+      } else {
+        setSnackbar({ open: true, message: data.error || "Failed to change password", severity: "error" });
+      }
+    } catch (err) {
+      setSnackbar({ open: true, message: "Network error", severity: "error" });
+    }
+  };
+
+  // Handle Enter key for name field
+  const handleNameKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSaveName();
+    }
+  };
+
+  // Snackbar close handler
+  const handleSnackbarClose = (_event?: React.SyntheticEvent | Event, reason?: string) => {
+    if (reason === "clickaway") return;
+    setSnackbar((prev) => ({ ...prev, open: false }));
   };
 
   return (
@@ -151,6 +272,7 @@ export default function ProfilePage() {
                 name="name"
                 value={tempData.name}
                 onChange={handleChange}
+                onKeyDown={handleNameKeyDown}
                 fullWidth
                 size="small"
                 autoFocus
@@ -165,7 +287,7 @@ export default function ProfilePage() {
               </Typography>
             )}
             <IconButton
-              onClick={() => toggleEdit("name")}
+              onClick={isEditing.name ? handleSaveName : () => toggleEdit("name")}
               sx={{
                 position: "absolute",
                 right: 0,
@@ -179,8 +301,8 @@ export default function ProfilePage() {
             </IconButton>
           </Box>
 
-          {/* Email */}
-          <Box sx={{ position: "relative" }}>
+          {/* Email (plain text, no edit icon) */}
+          <Box>
             <Typography
               variant="subtitle2"
               color="#800020"
@@ -189,96 +311,101 @@ export default function ProfilePage() {
             >
               Email
             </Typography>
-            {isEditing.email ? (
-              <TextField
-                name="email"
-                type="email"
-                value={tempData.email}
-                onChange={handleChange}
-                fullWidth
-                size="small"
-                autoFocus
-              />
-            ) : (
-              <Typography variant="body1" color="#4a4a4a" sx={{ lineHeight: 1.5 }}>
-                {user.email}
-              </Typography>
-            )}
-            <IconButton
-              onClick={() => toggleEdit("email")}
-              sx={{
-                position: "absolute",
-                right: 0,
-                top: isEditing.email ? 8 : "50%",
-                transform: isEditing.email ? "none" : "translateY(-50%)",
-                color: "#b22222",
-              }}
-              aria-label={isEditing.email ? "Save Email" : "Edit Email"}
-            >
-              {isEditing.email ? <SaveIcon /> : <EditIcon />}
-            </IconButton>
-          </Box>
-
-          {/* Password */}
-          <Box sx={{ position: "relative" }}>
-            <Typography
-              variant="subtitle2"
-              color="#800020"
-              fontWeight="700"
-              mb={1}
-            >
-              Password
+            <Typography variant="body1" color="#4a4a4a" sx={{ lineHeight: 1.5 }}>
+              {user.email}
             </Typography>
-            {isEditing.password ? (
-              <TextField
-                name="password"
-                type="password"
-                value={tempData.password}
-                onChange={handleChange}
-                fullWidth
-                size="small"
-                autoFocus
-                helperText="Leave blank to keep current password"
-              />
-            ) : (
-              <Typography
-                variant="body1"
-                color="#4a4a4a"
-                sx={{ fontStyle: "italic", lineHeight: 1.5 }}
-              >
-                ******** (hidden)
-              </Typography>
-            )}
-            <IconButton
-              onClick={() => toggleEdit("password")}
-              sx={{
-                position: "absolute",
-                right: 0,
-                top: isEditing.password ? 8 : "50%",
-                transform: isEditing.password ? "none" : "translateY(-50%)",
-                color: "#b22222",
-              }}
-              aria-label={isEditing.password ? "Save Password" : "Edit Password"}
-            >
-              {isEditing.password ? <SaveIcon /> : <EditIcon />}
-            </IconButton>
           </Box>
         </Stack>
 
-        <Button
-          variant="contained"
-          sx={{
-            mt: 6,
-            backgroundColor: "#800020",
-            color: "#fff",
-            fontWeight: 600,
-            "&:hover": { backgroundColor: "#4b0013" },
-            textTransform: "none",
-          }}
-          onClick={() => router.push("/dashboard")}
+        {/* Buttons: Change Password and Back to Dashboard */}
+        <Stack direction="row" spacing={2} justifyContent="center" mt={6}>
+          <Button
+            variant="contained"
+            sx={{
+              backgroundColor: "#800020",
+              color: "#fff",
+              fontWeight: 600,
+              "&:hover": { backgroundColor: "#4b0013" },
+              textTransform: "none",
+            }}
+            onClick={handleOpenChangePassword}
+          >
+            Change Password
+          </Button>
+          <Button
+            variant="contained"
+            sx={{
+              backgroundColor: "#800020",
+              color: "#fff",
+              fontWeight: 600,
+              "&:hover": { backgroundColor: "#4b0013" },
+              textTransform: "none",
+            }}
+            onClick={() => router.push("/dashboard")}
+          >
+            Back to Dashboard
+          </Button>
+        </Stack>
+
+        {/* Change Password Dialog */}
+        <Dialog open={openChangePasswordDialog} onClose={handleCloseChangePassword}>
+          <DialogTitle>Change Password</DialogTitle>
+          <DialogContent sx={{ minWidth: 350 }}>
+            <Stack spacing={3} mt={1}>
+              <TextField
+                label="Current Password"
+                type="password"
+                value={currentPassword}
+                onChange={e => setCurrentPassword(e.target.value)}
+                fullWidth
+                autoFocus
+              />
+              <TextField
+                label="New Password"
+                type="password"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                fullWidth
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseChangePassword} color="primary">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveChangePassword}
+              variant="contained"
+              sx={{
+                backgroundColor: "#800020",
+                color: "#fff",
+                fontWeight: 600,
+                "&:hover": { backgroundColor: "#4b0013" },
+                textTransform: "none",
+              }}
+            >
+              Save
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Snackbar for feedback */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={3000}
+          onClose={handleSnackbarClose}
+          anchorOrigin={{ vertical: "top", horizontal: "center" }}
         >
-          Back to Dashboard
-        </Button>
+          <MuiAlert
+            onClose={handleSnackbarClose}
+            severity={snackbar.severity}
+            sx={{ width: "100%" }}
+            elevation={6}
+            variant="filled"
+          >
+            {snackbar.message}
+          </MuiAlert>
+        </Snackbar>
       </Paper>
     </Box>
   );
