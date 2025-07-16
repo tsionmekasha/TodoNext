@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   AppBar,
   Toolbar,
@@ -18,7 +18,27 @@ export default function Navbar() {
   const router = useRouter();
 
   // Simulated username, replace with actual user data later
-  const username = "John Doe";
+  const [username, setUsername] = useState<string>("...");
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem("token") : null;
+      if (!token) return;
+      try {
+        const res = await fetch("/api/user/profile", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUsername(data.name || "Profile");
+        } else {
+          setUsername("Profile");
+        }
+      } catch {
+        setUsername("Profile");
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
 

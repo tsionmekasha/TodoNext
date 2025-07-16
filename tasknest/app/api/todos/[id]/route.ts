@@ -15,9 +15,22 @@ export async function PUT(request: NextRequest, context: any) {
       return NextResponse.json({ error: "Invalid todo id" }, { status: 400 });
     }
 
-    const { title } = await request.json();
-    if (!title || typeof title !== "string" || !title.trim()) {
-      return NextResponse.json({ error: "Title is required" }, { status: 400 });
+    const body = await request.json();
+    const updateFields: any = { updatedAt: new Date() };
+    if (body.title !== undefined) {
+      if (!body.title || typeof body.title !== "string" || !body.title.trim()) {
+        return NextResponse.json({ error: "Title is required" }, { status: 400 });
+      }
+      updateFields.title = body.title.trim();
+    }
+    if (body.completed !== undefined) {
+      if (typeof body.completed !== "boolean") {
+        return NextResponse.json({ error: "'completed' must be a boolean" }, { status: 400 });
+      }
+      updateFields.completed = body.completed;
+    }
+    if (!updateFields.title && updateFields.completed === undefined) {
+      return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
     }
 
     const client = await clientPromise;
@@ -25,8 +38,8 @@ export async function PUT(request: NextRequest, context: any) {
 
     const result = await db.collection("todos").findOneAndUpdate(
       { _id: new ObjectId(id), userId },
-      { $set: { title: title.trim(), updatedAt: new Date() } },
-      { returnDocument: "after" } 
+      { $set: updateFields },
+      { returnDocument: "after" }
     );
 
     if (!result) {

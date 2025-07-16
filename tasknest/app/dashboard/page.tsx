@@ -28,6 +28,7 @@ interface Todo {
   title: string;
   createdAt?: string;
   updatedAt?: string;
+  completed?: boolean; // Added completed field
 }
 
 export default function DashboardPage() {
@@ -176,6 +177,35 @@ export default function DashboardPage() {
     setTodoToDelete(null);
   };
 
+  // Toggle completed state in backend and update UI
+  const toggleTodoCompleted = async (id: string) => {
+    const todo = todos.find((t) => t._id === id);
+    if (!todo) return;
+    const token = localStorage.getItem("token");
+    if (!token) return router.push("/login");
+    // Optimistically update UI
+    setTodos((prev) => prev.map((t) => t._id === id ? { ...t, completed: !t.completed } : t));
+    try {
+      const res = await fetch(`/api/todos/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ completed: !todo.completed }),
+      });
+      if (!res.ok) {
+        // Revert UI if error
+        setTodos((prev) => prev.map((t) => t._id === id ? { ...t, completed: todo.completed } : t));
+        const data = await res.json();
+        setError(data.error || "Failed to update todo");
+      }
+    } catch (err) {
+      setTodos((prev) => prev.map((t) => t._id === id ? { ...t, completed: todo.completed } : t));
+      setError("Network error");
+    }
+  };
+
   return (
     <>
       <Navbar />
@@ -225,8 +255,8 @@ export default function DashboardPage() {
                   <TodoItem
                     key={todo._id}
                     task={todo.title}
-                    completed={false}
-                    onToggle={() => {}}
+                    completed={!!todo.completed}
+                    onToggle={() => toggleTodoCompleted(todo._id)}
                     onDelete={() => handleDeleteClick(todo._id)}
                     onEdit={(newTask) => editTodo(todo._id, newTask)}
                   />

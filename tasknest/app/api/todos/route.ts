@@ -13,9 +13,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse and validate body
-    const { title } = await request.json();
+    const { title, completed } = await request.json();
     if (!title || typeof title !== "string" || !title.trim()) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
+    }
+    // Validate completed if provided
+    let completedValue = false;
+    if (typeof completed !== 'undefined') {
+      if (typeof completed !== 'boolean') {
+        return NextResponse.json({ error: "'completed' must be a boolean" }, { status: 400 });
+      }
+      completedValue = completed;
     }
 
     const client = await clientPromise;
@@ -24,6 +32,7 @@ export async function POST(request: NextRequest) {
     const todo = {
       userId, // store as string
       title: title.trim(),
+      completed: completedValue,
       createdAt: now,
       updatedAt: now,
     };
