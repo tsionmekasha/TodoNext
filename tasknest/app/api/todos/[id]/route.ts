@@ -3,14 +3,14 @@ import clientPromise from "../../../server/mongodb";
 import { getUserIdFromRequest } from "../../../server/jwt";
 import { ObjectId } from "mongodb";
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, context: any) {
   try {
     const userId = getUserIdFromRequest(request as any);
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = context.params;
     if (!ObjectId.isValid(id)) {
       return NextResponse.json({ error: "Invalid todo id" }, { status: 400 });
     }
@@ -49,14 +49,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, context: any) {
   try {
     const userId = getUserIdFromRequest(request as any);
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = context.params;
     if (!ObjectId.isValid(id)) {
       return NextResponse.json({ error: "Invalid todo id" }, { status: 400 });
     }

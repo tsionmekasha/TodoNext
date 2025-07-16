@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import clientPromise from "../../server/mongodb";
 import { getUserIdFromRequest } from "../../server/jwt";
 import { ObjectId } from "mongodb";
+import { NextRequest } from "next/server";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     // Authenticate user
     const userId = getUserIdFromRequest(request as any);
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     // Authenticate user
     const userId = getUserIdFromRequest(request as any);
