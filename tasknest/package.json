@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:frontend": "jest --config=jest.config.frontend.js __tests__/dashboard.test.tsx",
+    "test:frontend": "jest --config=jest.config.frontend.js __tests__/**/*.test.tsx",
     "test:backend": "jest --config=jest.config.backend.js __tests__/auth.test.ts __tests__/todos.test.ts __tests__/user.test.ts",
     "test": "npm run test:frontend && npm run test:backend",
     "jest": {
