@@ -1,10 +1,10 @@
 // Add this at the very top of your test file
 
-import { loginUser } from "../app/api/auth/login/logic";
-import { signupUser } from "../app/api/auth/signup/logic";
+import { loginUser } from "../../../app/api/auth/login/logic";
+import { signupUser } from "../../../app/api/auth/signup/logic";
 
 // Mock the MongoDB clientPromise import
-jest.mock("../app/server/mongodb", () => ({
+jest.mock("../../../app/server/mongodb", () => ({
   __esModule: true,
   default: Promise.resolve({
     db: () => ({
@@ -18,7 +18,7 @@ jest.mock("../app/server/mongodb", () => ({
 
 const getMockedCollection = () => {
   // Get the mocked collection from the mocked clientPromise
-  const client = require("../app/server/mongodb").default;
+  const client = require("../../app/server/mongodb").default;
   return client.then((c: any) => c.db().collection());
 };
 

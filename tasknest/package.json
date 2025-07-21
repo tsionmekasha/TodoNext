@@ -7,9 +7,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+<<<<<<< HEAD
     "test:frontend": "jest --config=jest.config.frontend.js __tests__/**/*.test.tsx",
     "test:backend": "jest --config=jest.config.backend.js __tests__/auth.test.ts __tests__/todos.test.ts __tests__/user.test.ts",
     "test": "npm run test:frontend && npm run test:backend",
+=======
+    "test:unit:frontend": "jest --config=jest.config.frontend.js __tests__/unit/frontend",
+    "test:unit:backend": "jest --config=jest.config.backend.js __tests__/unit/backend",
+    "test:unit": "npm run test:unit:frontend && npm run test:unit:backend",
+>>>>>>> d55eeeb1943e1ab6664fbacbd894f2dda94aae98
     "jest": {
       "testEnvironment": "jsdom"
     },

@@ -1,4 +1,4 @@
-import { getUserProfile, updateUserProfile, changeUserPassword } from "../app/api/user/logic";
+import { getUserProfile, updateUserProfile, changeUserPassword } from "../../../app/api/user/logic";
 import bcrypt from "bcrypt";
 
 const mockCollection = {
@@ -7,7 +7,7 @@ const mockCollection = {
   updateOne: jest.fn(),
 };
 
-jest.mock("../app/server/mongodb", () => ({
+jest.mock("../../../app/server/mongodb", () => ({
   __esModule: true,
   default: Promise.resolve({
     db: () => ({
