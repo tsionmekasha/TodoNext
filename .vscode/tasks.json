@@ -1,0 +1,15 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "Run Jest tests",
+			"command": "npx jest __tests__/auth.test.ts",
+			"group": "test",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"args": []
+		}
+	]
+}
