@@ -1,4 +1,4 @@
-import { createTodo, getTodos, updateTodo, deleteTodo } from "../app/api/todos/logic";
+import { createTodo, getTodos, updateTodo, deleteTodo } from "../../app/api/todos/logic";
 
 const mockCollection = {
   insertOne: jest.fn(),
@@ -8,7 +8,7 @@ const mockCollection = {
   deleteOne: jest.fn(),
 };
 
-jest.mock("../app/server/mongodb", () => ({
+jest.mock("../../app/server/mongodb", () => ({
   __esModule: true,
   default: Promise.resolve({
     db: () => ({
