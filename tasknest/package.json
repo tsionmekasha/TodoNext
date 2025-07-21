@@ -7,9 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:frontend": "jest --config=jest.config.frontend.js __tests__/frontend",
-    "test:backend": "jest --config=jest.config.backend.js __tests__/backend",
-    "test": "npm run test:frontend && npm run test:backend",
+    "test:unit:frontend": "jest --config=jest.config.frontend.js __tests__/unit/frontend",
+    "test:unit:backend": "jest --config=jest.config.backend.js __tests__/unit/backend",
+    "test:unit": "npm run test:unit:frontend && npm run test:unit:backend",
     "jest": {
       "testEnvironment": "jsdom"
     },

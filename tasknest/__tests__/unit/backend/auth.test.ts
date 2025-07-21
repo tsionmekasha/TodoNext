@@ -1,10 +1,10 @@
 // Add this at the very top of your test file
 
-import { loginUser } from "../../app/api/auth/login/logic";
-import { signupUser } from "../../app/api/auth/signup/logic";
+import { loginUser } from "../../../app/api/auth/login/logic";
+import { signupUser } from "../../../app/api/auth/signup/logic";
 
 // Mock the MongoDB clientPromise import
-jest.mock("../../app/server/mongodb", () => ({
+jest.mock("../../../app/server/mongodb", () => ({
   __esModule: true,
   default: Promise.resolve({
     db: () => ({
