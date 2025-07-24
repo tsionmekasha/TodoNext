@@ -10,7 +10,10 @@
     "test": "jest",
     "test:watch": "jest --watchAll",
     "test:e2e": "cypress run",
-    "cypress:open": "cypress open"
+    "cypress:open": "cypress open",
+    "test:unit:frontend": "jest --config=jest.config.frontend.js __tests__/unit/frontend",
+    "test:unit:backend": "jest --config=jest.config.backend.js __tests__/unit/backend",
+    "test:unit": "npm run test:unit:frontend && npm run test:unit:backend"
   },
   "jest": {
     "testEnvironment": "jsdom"
