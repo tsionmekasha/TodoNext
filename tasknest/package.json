@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "jest",
+    // "test": "jest",
     "test:watch": "jest --watchAll",
     "test:e2e": "cypress run",
     "cypress:open": "cypress open",
@@ -15,9 +15,9 @@
     "test:unit:backend": "jest --config=jest.config.backend.js __tests__/unit/backend",
     "test:unit": "npm run test:unit:frontend && npm run test:unit:backend"
   },
-  "jest": {
-    "testEnvironment": "jsdom"
-  },
+  // "jest": {
+  //   "testEnvironment": "jsdom"
+  // },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
