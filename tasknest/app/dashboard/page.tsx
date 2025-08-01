@@ -22,6 +22,7 @@ import {
 import Navbar from "@/components/Navbar";
 import TodoForm from "@/components/TodoForm";
 import TodoItem from "@/components/TodoItem";
+import ChatbotButton from "@/components/ChatbotButton";
 
 interface Todo {
   _id: string;
@@ -265,6 +266,17 @@ export default function DashboardPage() {
             )}
           </Paper>
         </Container>
+        {/* Chatbot button fixed at bottom right */}
+        <Box
+          sx={{
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+            zIndex: 1300,
+          }}
+        >
+          <ChatbotButton />
+        </Box>
       </Box>
 
       {/* Snackbar for edit confirmation */}
@@ -304,6 +316,7 @@ export default function DashboardPage() {
           </Button>
         </DialogActions>
       </Dialog>
+       
     </>
   );
 }
