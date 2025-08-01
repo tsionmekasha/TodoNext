@@ -13,6 +13,7 @@ import {
 } from "@mui/material";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import { useRouter } from "next/navigation";
+import ChatbotButton from "./ChatbotButton";
 
 export default function Navbar() {
   const router = useRouter();
@@ -72,7 +73,8 @@ export default function Navbar() {
           TaskNest
         </Typography>
 
-        <Box sx={{ flexGrow: 0 }}>
+        <Box sx={{ flexGrow: 0, display: 'flex', alignItems: 'center', gap: 2 }}>
+          <ChatbotButton userId={username} />
           <Tooltip title={username} arrow>
             <IconButton
               onClick={handleOpenUserMenu}
