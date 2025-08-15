@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import clientPromise from "../../../server/mongodb";
+import pool from "../../../server/postgresql";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
@@ -9,9 +9,8 @@ export async function loginUser({ email, password }: { email: string, password: 
     return { status: 400, body: { error: "Missing email or password" } };
   }
   try {
-    const client = await clientPromise;
-    const db = client.db();
-    const user = await db.collection("users").findOne({ email });
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
     if (!user) {
       return { status: 401, body: { error: "Invalid credentials" } };
     }
@@ -20,7 +19,7 @@ export async function loginUser({ email, password }: { email: string, password: 
       return { status: 401, body: { error: "Invalid credentials" } };
     }
     const token = jwt.sign(
-      { userId: user._id.toString(), email: user.email },
+      { userId: user.id, email: user.email },
       JWT_SECRET,
       { expiresIn: "1h" }
     );

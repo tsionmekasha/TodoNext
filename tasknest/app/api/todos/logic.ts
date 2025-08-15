@@ -1,14 +1,12 @@
-import { ObjectId } from "mongodb";
-import clientPromise from "../../server/mongodb";
+import pool from "../../server/postgresql";
 
-export async function createTodo({ userId, title, completed }: { userId: string, title: string, completed?: boolean }) {
-  if (!userId) {
-    return { status: 401, body: { error: "Unauthorized" } };
-  }
+async function createTodo(userId: string, body: { title?: string; completed?: boolean }) {
+  const title = body?.title;
   if (!title || typeof title !== "string" || !title.trim()) {
     return { status: 400, body: { error: "Title is required" } };
   }
   let completedValue = false;
+  const completed = body?.completed;
   if (typeof completed !== 'undefined') {
     if (typeof completed !== 'boolean') {
       return { status: 400, body: { error: "'completed' must be a boolean" } };
@@ -16,47 +14,41 @@ export async function createTodo({ userId, title, completed }: { userId: string,
     completedValue = completed;
   }
   try {
-    const client = await clientPromise;
-    const db = client.db();
     const now = new Date();
-    const todo = {
-      userId,
-      title: title.trim(),
-      completed: completedValue,
-      createdAt: now,
-      updatedAt: now,
-    };
-    const result = await db.collection("todos").insertOne(todo);
-    return { status: 201, body: { _id: result.insertedId, ...todo } };
+    const result = await pool.query(
+      `INSERT INTO todos (user_id, title, completed, created_at, updated_at) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [userId, title.trim(), completedValue, now, now]
+    );
+    return { status: 201, body: result.rows[0] };
   } catch (error) {
     console.error("Create todo error:", error);
     return { status: 500, body: { error: "Internal Server Error" } };
   }
 }
 
-export async function getTodos({ userId }: { userId: string }) {
+async function getTodos(userId: string) {
   if (!userId) {
     return { status: 401, body: { error: "Unauthorized" } };
   }
   try {
-    const client = await clientPromise;
-    const db = client.db();
-    const todos = await db.collection("todos").find({ userId }).sort({ createdAt: -1 }).toArray();
-    return { status: 200, body: todos };
+    const result = await pool.query(
+      `SELECT * FROM todos WHERE user_id = $1 ORDER BY created_at DESC`,
+      [userId]
+    );
+    return { status: 200, body: result.rows };
   } catch (error) {
     console.error("Get todos error:", error);
     return { status: 500, body: { error: "Internal Server Error" } };
   }
 }
-
-export async function updateTodo({ userId, id, body }: { userId: string, id: string, body: { title?: string, completed?: boolean } }) {
+async function updateTodo(userId: string, id: string, body: { title?: string; completed?: boolean }) {
   if (!userId) {
     return { status: 401, body: { error: "Unauthorized" } };
   }
-  if (!ObjectId.isValid(id)) {
+  if (!id) {
     return { status: 400, body: { error: "Invalid todo id" } };
   }
-  const updateFields: { updatedAt: Date; title?: string; completed?: boolean } = { updatedAt: new Date() };
+  const updateFields: { title?: string; completed?: boolean } = {};
   if (body.title !== undefined) {
     if (!body.title || typeof body.title !== "string" || !body.title.trim()) {
       return { status: 400, body: { error: "Title is required" } };
@@ -73,43 +65,41 @@ export async function updateTodo({ userId, id, body }: { userId: string, id: str
     return { status: 400, body: { error: "No valid fields to update" } };
   }
   try {
-    const client = await clientPromise;
-    const db = client.db();
-    const result = await db.collection("todos").findOneAndUpdate(
-      { _id: new ObjectId(id), userId },
-      { $set: updateFields },
-      { returnDocument: "after" }
-    );
-    if (!result) {
-      return { status: 500, body: { error: "Unexpected update failure" } };
+    const now = new Date();
+    let query = 'UPDATE todos SET updated_at = $1';
+    const params: any[] = [now];
+    let paramIdx = 2;
+    if (updateFields.title !== undefined) {
+      query += `, title = $${paramIdx++}`;
+      params.push(updateFields.title);
     }
-    if (!result.value) {
-      const fallback = await db.collection("todos").findOne({ _id: new ObjectId(id), userId });
-      if (fallback) {
-        return { status: 200, body: fallback };
-      } else {
-        return { status: 404, body: { error: "Todo not found" } };
-      }
+    if (updateFields.completed !== undefined) {
+      query += `, completed = $${paramIdx++}`;
+      params.push(updateFields.completed);
     }
-    return { status: 200, body: result.value };
+    query += ` WHERE id = $${paramIdx++} AND user_id = $${paramIdx}`;
+    params.push(id, userId);
+    await pool.query(query, params);
+    const result = await pool.query('SELECT * FROM todos WHERE id = $1 AND user_id = $2', [id, userId]);
+    if (result.rows.length === 0) {
+      return { status: 404, body: { error: "Todo not found" } };
+    }
+    return { status: 200, body: result.rows[0] };
   } catch (error) {
     console.error("Update todo error:", error);
     return { status: 500, body: { error: "Internal Server Error" } };
   }
 }
-
-export async function deleteTodo({ userId, id }: { userId: string, id: string }) {
+async function deleteTodo(userId: string, id: string) {
   if (!userId) {
     return { status: 401, body: { error: "Unauthorized" } };
   }
-  if (!ObjectId.isValid(id)) {
+  if (!id) {
     return { status: 400, body: { error: "Invalid todo id" } };
   }
   try {
-    const client = await clientPromise;
-    const db = client.db();
-    const result = await db.collection("todos").deleteOne({ _id: new ObjectId(id), userId });
-    if (result.deletedCount === 0) {
+    const result = await pool.query('DELETE FROM todos WHERE id = $1 AND user_id = $2', [id, userId]);
+    if (result.rowCount === 0) {
       return { status: 404, body: { error: "Todo not found" } };
     }
     return { status: 204, body: null };
@@ -117,4 +107,4 @@ export async function deleteTodo({ userId, id }: { userId: string, id: string })
     console.error("Delete todo error:", error);
     return { status: 500, body: { error: "Internal Server Error" } };
   }
-} 
+}  
