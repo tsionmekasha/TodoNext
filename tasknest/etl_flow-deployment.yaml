@@ -1,0 +1,8 @@
+version: 3
+deployments:
+  - name: Hourly ETL
+    flow_name: run_etl
+    schedule:
+      cron: "0 * * * *"
+    work_queue_name: default
+    entrypoint: etl_flow.py:run_etl
